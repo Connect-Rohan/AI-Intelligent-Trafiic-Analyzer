@@ -1,8 +1,23 @@
 import streamlit as st
 import pandas as pd
+from signal_optimizer import optimize_signals
 import os
 import matplotlib.pyplot as plt
 import streamlit.components.v1 as components
+from traffic_simulation import (
+    traffic_simulation_controls,
+    predict_congestion,
+    congestion_label
+)
+import joblib
+
+# ==========================================
+# LOAD TRAINED TRAFFIC MODEL
+# ==========================================
+
+model = joblib.load(
+    "traffic_model.pkl"
+)
 
 # ==========================================
 # PAGE CONFIG
@@ -150,1323 +165,1464 @@ with col4:
         highest_route["Route"]
     )
 
-
 # ==========================================
-# AI TRAFFIC CAMERA FEEDS
-# ==========================================
-
-st.divider()
-
-st.subheader("🎥 AI Traffic Camera Feeds")
-
-st.write(
-    "Live-style visualization of AI vehicle detection "
-    "from traffic camera footage."
-)
-
-
-video_col1, video_col2 = st.columns(2)
-
-
-# ==========================================
-# ROUTE A
-# ==========================================
-
-with video_col1:
-
-    st.markdown("### 🛣️ Route A")
-
-    route_a_video = (
-        "processed_videos/route_a_processed.mp4"
-    )
-
-    if os.path.exists(route_a_video):
-
-        st.video(
-            route_a_video,
-            format="video/mp4"
-        )
-
-    else:
-
-        st.warning(
-            "Route A processed video not found."
-        )
-
-
-# ==========================================
-# ROUTE B
-# ==========================================
-
-with video_col2:
-
-    st.markdown("### 🛣️ Route B")
-
-    route_b_video = (
-        "processed_videos/route_b_processed.mp4"
-    )
-
-    if os.path.exists(route_b_video):
-
-        st.video(
-            route_b_video,
-            format="video/mp4"
-        )
-
-    else:
-
-        st.warning(
-            "Route B processed video not found."
-        )
-# ==========================================
-# ROUTE INTELLIGENCE
+# DASHBOARD MODE
 # ==========================================
 
 st.divider()
 
-st.subheader("🧠 AI Route Intelligence")
-
-
-route_columns = st.columns(
-    len(latest_routes)
+mode = st.radio(
+    "🖥 Dashboard Mode",
+    [
+        "📹 Camera Monitoring",
+        "🎮 Simulation Dashboard"
+    ],
+    horizontal=True
 )
 
+st.divider()
+if mode == "📹 Camera Monitoring":
 
-for column, (_, route) in zip(
-    route_columns,
-    latest_routes.iterrows()
-):
+    # ==========================================
+    # AI TRAFFIC CAMERA FEEDS
+    # ==========================================
 
-    with column:
+    st.divider()
 
-        st.markdown(
-            f"## {route['Route']}"
-        )
+    st.subheader("🎥 AI Traffic Camera Feeds")
 
-        st.metric(
-            "🚗 Vehicles",
-            int(route["Total_Vehicles"])
-        )
+    video_col1, video_col2 = st.columns(2)
 
-        st.metric(
-            "📊 Density",
-            f"{route['Density'] * 100:.1f}%"
-        )
+    # ==========================================
+    # ROUTE A
+    # ==========================================
 
-        congestion = route[
-            "Congestion_Level"
-        ]
+    with video_col1:
 
-        if congestion == "Low":
+        st.markdown("### 🛣️ Route A")
 
-            st.success(
-                f"🟢 {congestion}"
-            )
+        route_a_video = "processed_videos/route_a_processed.mp4"
 
-        elif congestion == "Moderate":
+        if os.path.exists(route_a_video):
 
-            st.warning(
-                f"🟠 {congestion}"
-            )
-
-        elif congestion == "High":
-
-            st.error(
-                f"🔴 {congestion}"
+            st.video(
+                route_a_video,
+                format="video/mp4"
             )
 
         else:
 
-            st.error(
-                f"🚨 {congestion}"
+            st.warning(
+                "Route A processed video not found."
             )
 
-        st.metric(
-            "🚦 Green Time",
-            f"{route['Green_Time']} sec"
+    # ==========================================
+    # ROUTE B
+    # ==========================================
+
+    with video_col2:
+
+        st.markdown("### 🛣️ Route B")
+
+        route_b_video = "processed_videos/route_b_processed.mp4"
+
+        if os.path.exists(route_b_video):
+
+            st.video(
+                route_b_video,
+                format="video/mp4"
+            )
+
+        else:
+
+            st.warning(
+                "Route B processed video not found."
+            )
+
+    # ==========================================
+    # ROUTE INTELLIGENCE
+    # ==========================================
+
+    st.divider()
+
+    st.subheader("🧠 AI Route Intelligence")
+
+    route_columns = st.columns(len(latest_routes))
+
+    for column, (_, route) in zip(
+        route_columns,
+        latest_routes.iterrows()
+    ):
+
+        with column:
+
+            st.markdown(f"## {route['Route']}")
+
+            st.metric(
+                "🚗 Vehicles",
+                int(route["Total_Vehicles"])
+            )
+
+            st.metric(
+                "📊 Density",
+                f"{route['Density'] * 100:.1f}%"
+            )
+
+            congestion = route["Congestion_Level"]
+
+            if congestion == "Low":
+
+                st.success(f"🟢 {congestion}")
+
+            elif congestion == "Moderate":
+
+                st.warning(f"🟠 {congestion}")
+
+            elif congestion == "High":
+
+                st.error(f"🔴 {congestion}")
+
+            else:
+
+                st.error(f"🚨 {congestion}")
+
+            st.metric(
+                "🚦 Green Time",
+                f"{route['Green_Time']} sec"
+            )
+
+            st.metric(
+                "📈 Traffic Share",
+                f"{route['Traffic_Share'] * 100:.1f}%"
+            )
+
+    # ==========================================
+    # TRAFFIC COMPARISON
+    # ==========================================
+
+    st.divider()
+
+    st.subheader("📈 Traffic Comparison")
+
+    comparison = latest_routes[
+        ["Route", "Total_Vehicles"]
+    ].set_index("Route")
+
+    st.bar_chart(comparison)
+
+    # ==========================================
+    # TRAFFIC DENSITY
+    # ==========================================
+
+    st.subheader("📊 Traffic Density")
+
+    density = latest_routes[
+        ["Route", "Density"]
+    ].copy()
+
+    density["Density"] *= 100
+
+    density = density.set_index("Route")
+
+    st.line_chart(density)
+
+    # ==========================================
+    # TRAFFIC DATASET
+    # ==========================================
+
+    st.divider()
+
+    with st.expander("🔍 View Complete Traffic Dataset"):
+
+        st.dataframe(
+            data,
+            use_container_width=True
         )
 
-        st.metric(
-            "📈 Traffic Share",
-            f"{route['Traffic_Share'] * 100:.1f}%"
-        )
+elif mode == "🎮 Simulation Dashboard":
 
+    st.subheader("🎮 AI Traffic Simulation Dashboard")
 
-# ==========================================
-# ROUTE COMPARISON
-# ==========================================
+    top_left, top_right = st.columns([1, 2])
+    bottom_left, bottom_right = st.columns([1, 2])
 
-st.divider()
+    # ==========================================
+    # INTERACTIVE TRAFFIC SIMULATION
+    # ==========================================    
 
-st.subheader("📈 Traffic Comparison")
+    st.divider()
 
+with top_left:
 
-comparison = latest_routes[
-    ["Route", "Total_Vehicles"]
-].set_index(
-    "Route"
-)
+    st.subheader("🎮 Simulation Controls")
 
+    simulation = traffic_simulation_controls(
+        default_route_a=23,
+        default_route_b=13
+    )
+    # ==========================================
+    # REAL-TIME ROUTE A PREDICTION
+    # ==========================================
 
-st.bar_chart(
-    comparison
-)
+    route_a = simulation["Route A"]
 
-
-# ==========================================
-# DENSITY
-# ==========================================
-
-st.subheader("📊 Traffic Density")
-
-
-density = latest_routes[
-    ["Route", "Density"]
-].copy()
-
-
-density["Density"] *= 100
-
-
-density = density.set_index(
-    "Route"
-)
-
-
-st.line_chart(
-    density
-)
-
-
-# ==========================================
-# TRAFFIC DATA
-# ==========================================
-
-st.divider()
-
-with st.expander(
-    "🔍 View Complete Traffic Dataset"
-):
-
-    st.dataframe(
-        data,
-        use_container_width=True
+    prediction_a, total_a, density_a = predict_congestion(
+        model,
+        route_a["Cars"],
+        route_a["Motorcycles"],
+        route_a["Buses"],
+        route_a["Trucks"]
     )
 
-# ==========================================
-# CUSTOM TRAFFIC MAP
-# ==========================================
-
-st.divider()
-
-st.subheader("🗺️ AI Traffic Network")
+    congestion_a = congestion_label(
+        prediction_a
+    )
 
 
-# ==========================================
-# GET ROUTE DATA
-# ==========================================
+    # ==========================================
+    # REAL-TIME ROUTE B PREDICTION
+    # ==========================================
 
-route_data = {}
+    route_b = simulation["Route B"]
 
-for _, route in latest_routes.iterrows():
+    prediction_b, total_b, density_b = predict_congestion(
+        model,
+        route_b["Cars"],
+        route_b["Motorcycles"],
+        route_b["Buses"],
+        route_b["Trucks"]
+    )
 
-    route_data[route["Route"]] = {
-        "vehicles": int(route["Total_Vehicles"]),
-        "density": float(route["Density"]),
-        "congestion": route["Congestion_Level"],
-        "green_time": int(route["Green_Time"])
+    congestion_b = congestion_label(
+        prediction_b
+    )
+
+    # ==========================================
+    # AI SIGNAL OPTIMIZATION
+    # ==========================================
+
+    route_a_live = {
+        "Total_Vehicles": total_a
     }
 
+    route_b_live = {
+        "Total_Vehicles": total_b
+    }
 
-# ==========================================
-# CONGESTION COLORS
-# ==========================================
-
-def get_route_color(level):
-
-    if level == "Low":
-        return "green"
-
-    elif level == "Moderate":
-        return "orange"
-
-    elif level == "High":
-        return "red"
-
-    else:
-        return "darkred"
-
-
-# ==========================================
-# CREATE MAP
-# ==========================================
-
-fig, ax = plt.subplots(
-    figsize=(12, 6)
-)
-
-
-# ==========================================
-# ROAD POSITIONS
-# ==========================================
-
-# Route A - horizontal
-route_a_x = [0, 5]
-route_a_y = [3, 3]
-
-# Route B - horizontal
-route_b_x = [5, 10]
-route_b_y = [3, 3]
-
-# Main vertical road
-main_x = [5, 5]
-main_y = [0, 6]
-
-
-# ==========================================
-# DRAW MAIN ROADS
-# ==========================================
-
-ax.plot(
-    main_x,
-    main_y,
-    linewidth=18,
-    color="lightgray",
-    solid_capstyle="round"
-)
-
-
-# Route A
-if "Route A" in route_data:
-
-    color_a = get_route_color(
-        route_data["Route A"]["congestion"]
+    signal_data = optimize_signals(
+        route_a_live,
+        route_b_live
     )
 
+    green_a = signal_data["Route A"]["Green_Time"]
+    green_b = signal_data["Route B"]["Green_Time"]
+
+    share_a = signal_data["Route A"]["Traffic_Share"]
+    share_b = signal_data["Route B"]["Traffic_Share"]
+
+
+    # ==========================================
+    # CUSTOM TRAFFIC MAP
+    # ==========================================
+
+    st.divider()
+
+    st.subheader("🗺️ AI Traffic Network")
+
+
+
+    # ==========================================
+    # LIVE ROUTE DATA
+    # ==========================================
+
+    route_data = {
+
+        "Route A": {
+
+            "vehicles": total_a,
+
+            "density": density_a,
+
+            "congestion": congestion_a,
+
+            "green_time": green_a
+
+        },
+
+        "Route B": {
+
+            "vehicles": total_b,
+
+            "density": density_b,
+
+            "congestion": congestion_b,
+
+            "green_time": green_b
+
+        }
+
+    }
+
+    # ==========================================
+    # CONGESTION COLORS
+    # ==========================================
+
+    def get_route_color(level):
+
+        if level == "Low":
+            return "green"
+
+        elif level == "Moderate":
+            return "orange"
+
+        elif level == "High":
+            return "red"
+
+        else:
+            return "darkred"
+
+
+    # ==========================================
+    # CREATE MAP
+    # ==========================================
+
+    fig, ax = plt.subplots(
+        figsize=(12, 6)
+    )
+
+
+    # ==========================================
+    # ROAD POSITIONS
+    # ==========================================
+
+    # Route A - horizontal
+    route_a_x = [0, 5]
+    route_a_y = [3, 3]
+
+    # Route B - horizontal
+    route_b_x = [5, 10]
+    route_b_y = [3, 3]
+
+    # Main vertical road
+    main_x = [5, 5]
+    main_y = [0, 6]
+
+
+    # ==========================================
+    # DRAW MAIN ROADS
+    # ==========================================
+
     ax.plot(
-        route_a_x,
-        route_a_y,
+        main_x,
+        main_y,
         linewidth=18,
-        color=color_a,
+        color="lightgray",
         solid_capstyle="round"
     )
 
 
-# Route B
-if "Route B" in route_data:
+    # Route A
+    if "Route A" in route_data:
 
-    color_b = get_route_color(
-        route_data["Route B"]["congestion"]
+        color_a = get_route_color(
+            route_data["Route A"]["congestion"]
+        )
+
+        ax.plot(
+            route_a_x,
+            route_a_y,
+            linewidth=18,
+            color=color_a,
+            solid_capstyle="round"
+        )
+
+
+    # Route B
+    if "Route B" in route_data:
+
+        color_b = get_route_color(
+            route_data["Route B"]["congestion"]
+        )
+
+        ax.plot(
+            route_b_x,
+            route_b_y,
+            linewidth=18,
+            color=color_b,
+            solid_capstyle="round"
+        )
+
+
+    # ==========================================
+    # JUNCTION
+    # ==========================================
+
+    ax.scatter(
+        5,
+        3,
+        s=1000,
+        color="black",
+        zorder=5
     )
 
-    ax.plot(
-        route_b_x,
-        route_b_y,
-        linewidth=18,
-        color=color_b,
-        solid_capstyle="round"
+
+    ax.text(
+        5,
+        3,
+        "🚦",
+        fontsize=24,
+        ha="center",
+        va="center",
+        zorder=6
     )
 
 
-# ==========================================
-# JUNCTION
-# ==========================================
-
-ax.scatter(
-    5,
-    3,
-    s=1000,
-    color="black",
-    zorder=5
-)
-
-
-ax.text(
-    5,
-    3,
-    "🚦",
-    fontsize=24,
-    ha="center",
-    va="center",
-    zorder=6
-)
-
-
-# ==========================================
-# ROUTE LABELS
-# ==========================================
-
-ax.text(
-    2.5,
-    3.45,
-    "ROUTE A",
-    fontsize=14,
-    fontweight="bold",
-    ha="center"
-)
-
-
-ax.text(
-    7.5,
-    3.45,
-    "ROUTE B",
-    fontsize=14,
-    fontweight="bold",
-    ha="center"
-)
-
-
-# ==========================================
-# ROUTE INFORMATION
-# ==========================================
-
-if "Route A" in route_data:
-
-    route = route_data["Route A"]
+    # ==========================================
+    # ROUTE LABELS
+    # ==========================================
 
     ax.text(
         2.5,
-        2.45,
-        f"🚗 {route['vehicles']} vehicles\n"
-        f"Density: {route['density'] * 100:.1f}%\n"
-        f"{route['congestion']}\n"
-        f"Green: {route['green_time']} sec",
-        ha="center",
-        fontsize=10
+        3.45,
+        "ROUTE A",
+        fontsize=14,
+        fontweight="bold",
+        ha="center"
     )
 
-
-if "Route B" in route_data:
-
-    route = route_data["Route B"]
 
     ax.text(
         7.5,
-        2.45,
-        f"🚗 {route['vehicles']} vehicles\n"
-        f"Density: {route['density'] * 100:.1f}%\n"
-        f"{route['congestion']}\n"
-        f"Green: {route['green_time']} sec",
+        3.45,
+        "ROUTE B",
+        fontsize=14,
+        fontweight="bold",
+        ha="center"
+    )
+
+
+    # ==========================================
+    # ROUTE INFORMATION
+    # ==========================================
+
+    if "Route A" in route_data:
+
+        route = route_data["Route A"]
+
+        ax.text(
+            2.5,
+            2.45,
+            f"🚗 {route['vehicles']} vehicles\n"
+            f"Density: {route['density'] * 100:.1f}%\n"
+            f"{route['congestion']}\n"
+            f"Green: {route['green_time']} sec",
+            ha="center",
+            fontsize=10
+        )
+
+
+    if "Route B" in route_data:
+
+        route = route_data["Route B"]
+
+        ax.text(
+            7.5,
+            2.45,
+            f"🚗 {route['vehicles']} vehicles\n"
+            f"Density: {route['density'] * 100:.1f}%\n"
+            f"{route['congestion']}\n"
+            f"Green: {route['green_time']} sec",
+            ha="center",
+            fontsize=10
+        )
+
+
+    # ==========================================
+    # NORTH / SOUTH ROADS
+    # ==========================================
+
+    ax.text(
+        5,
+        5.7,
+        "⬆️ NORTH",
         ha="center",
-        fontsize=10
+        fontsize=11
     )
 
 
-# ==========================================
-# NORTH / SOUTH ROADS
-# ==========================================
-
-ax.text(
-    5,
-    5.7,
-    "⬆️ NORTH",
-    ha="center",
-    fontsize=11
-)
-
-
-ax.text(
-    5,
-    0.3,
-    "⬇️ SOUTH",
-    ha="center",
-    fontsize=11
-)
-
-
-# ==========================================
-# MAP SETTINGS
-# ==========================================
-
-ax.set_xlim(
-    -1,
-    11
-)
-
-ax.set_ylim(
-    -1,
-    7
-)
-
-ax.axis(
-    "off"
-)
-
-ax.set_title(
-    "AI-Powered Traffic Network",
-    fontsize=18,
-    fontweight="bold"
-)
-
-
-st.pyplot(
-    fig,
-    use_container_width=True
-)
-
-plt.close(fig)
-
-
-# ==========================================
-# LIVE TRAFFIC SIGNAL SIMULATION
-# ==========================================
-
-st.divider()
-
-st.subheader("🚦 Live AI Traffic Signal Control")
-
-st.write(
-    "The traffic signals continuously operate using "
-    "green-time recommendations generated by the AI system."
-)
-
-
-# ==========================================
-# GET GREEN TIMES
-# ==========================================
-
-route_a_green = int(
-    route_data.get(
-        "Route A",
-        {}
-    ).get(
-        "green_time",
-        30
+    ax.text(
+        5,
+        0.3,
+        "⬇️ SOUTH",
+        ha="center",
+        fontsize=11
     )
-)
 
-route_b_green = int(
-    route_data.get(
-        "Route B",
-        {}
-    ).get(
-        "green_time",
-        30
+
+    # ==========================================
+    # MAP SETTINGS
+    # ==========================================
+
+    ax.set_xlim(
+        -1,
+        11
     )
-)
 
+    ax.set_ylim(
+        -1,
+        7
+    )
 
-# ==========================================
-# LIMIT EXTREME VALUES
-# ==========================================
+    ax.axis(
+        "off"
+    )
 
-route_a_green = max(
-    10,
-    min(route_a_green, 90)
-)
+    ax.set_title(
+        "AI-Powered Traffic Network",
+        fontsize=18,
+        fontweight="bold"
+    )
 
-route_b_green = max(
-    10,
-    min(route_b_green, 90)
-)
 
+    st.pyplot(
+        fig,
+        use_container_width=True
+    )
 
-# ==========================================
-# YELLOW TIME
-# ==========================================
+    plt.close(fig)
 
-yellow_time = 3
+    # ==========================================
+    # LIVE TRAFFIC SIGNAL SIMULATION
+    # ==========================================
 
+    st.divider()
 
-# ==========================================
-# TOTAL CYCLE
-# ==========================================
+    st.subheader("🚦 Live AI Traffic Signal Control")
 
-total_cycle = (
-    route_a_green
-    + yellow_time
-    + route_b_green
-    + yellow_time
-)
+    st.write(
+        "The traffic signals continuously operate using "
+        "green-time recommendations generated by the AI system."
+    )
 
 
-# ==========================================
-# LIVE SIGNAL HTML
-# ==========================================
+    # ==========================================
+    # GET GREEN TIMES
+    # ==========================================
 
-signal_html = f"""
+    route_a_green = int(
+        route_data.get(
+            "Route A",
+            {}
+        ).get(
+            "green_time",
+            30
+        )
+    )
 
-<!DOCTYPE html>
+    route_b_green = int(
+        route_data.get(
+            "Route B",
+            {}
+        ).get(
+            "green_time",
+            30
+        )
+    )
 
-<html>
 
-<head>
+    # ==========================================
+    # LIMIT EXTREME VALUES
+    # ==========================================
 
-<style>
+    route_a_green = max(
+        10,
+        min(route_a_green, 90)
+    )
 
-body {{
+    route_b_green = max(
+        10,
+        min(route_b_green, 90)
+    )
 
-    margin: 0;
 
-    font-family:
-        Arial,
-        sans-serif;
+    # ==========================================
+    # YELLOW TIME
+    # ==========================================
 
-    background:
-        transparent;
+    yellow_time = 3
 
-}}
 
+    # ==========================================
+    # TOTAL CYCLE
+    # ==========================================
 
-.container {{
+    total_cycle = (
+        route_a_green
+        + yellow_time
+        + route_b_green
+        + yellow_time
+    )
 
-    width: 100%;
 
-    background:
-        #111827;
+    # ==========================================
+    # LIVE SIGNAL HTML
+    # ==========================================
 
-    border-radius:
-        18px;
+    signal_html = f"""
 
-    padding:
-        25px;
+    <!DOCTYPE html>
 
-    box-sizing:
-        border-box;
+    <html>
 
-    color:
-        white;
+    <head>
 
-}}
+    <style>
 
+    body {{
 
-.title {{
+        margin: 0;
 
-    text-align:
-        center;
+        font-family:
+            Arial,
+            sans-serif;
 
-    font-size:
-        24px;
+        background:
+            transparent;
 
-    font-weight:
-        bold;
+    }}
 
-    margin-bottom:
-        25px;
 
-}}
+    .container {{
 
+        width: 100%;
 
-.roads {{
+        background:
+            #111827;
 
-    display:
-        flex;
+        border-radius:
+            18px;
 
-    align-items:
-        center;
+        padding:
+            25px;
 
-    justify-content:
-        space-between;
+        box-sizing:
+            border-box;
 
-    gap:
-        15px;
+        color:
+            white;
 
-}}
+    }}
 
 
-.route {{
+    .title {{
 
-    flex:
-        1;
+        text-align:
+            center;
 
-    background:
-        #1f2937;
+        font-size:
+            24px;
 
-    border-radius:
-        15px;
+        font-weight:
+            bold;
 
-    padding:
-        20px;
+        margin-bottom:
+            25px;
 
-    text-align:
-        center;
+    }}
 
-}}
 
+    .roads {{
 
-.route-name {{
+        display:
+            flex;
 
-    font-size:
-        20px;
+        align-items:
+            center;
 
-    font-weight:
-        bold;
+        justify-content:
+            space-between;
 
-    margin-bottom:
-        15px;
+        gap:
+            15px;
 
-}}
+    }}
 
 
-.road {{
+    .route {{
 
-    height:
-        65px;
+        flex:
+            1;
 
-    border-radius:
-        10px;
+        background:
+            #1f2937;
 
-    display:
-        flex;
+        border-radius:
+            15px;
 
-    align-items:
-        center;
+        padding:
+            20px;
 
-    justify-content:
-        center;
+        text-align:
+            center;
 
-    font-size:
-        18px;
+    }}
 
-    font-weight:
-        bold;
 
-    transition:
-        background 0.5s;
+    .route-name {{
 
-}}
+        font-size:
+            20px;
 
+        font-weight:
+            bold;
 
-.signal-box {{
+        margin-bottom:
+            15px;
 
-    width:
-        85px;
+    }}
 
-    background:
-        #111;
 
-    border-radius:
-        20px;
+    .road {{
 
-    padding:
-        12px;
+        height:
+            65px;
 
-    display:
-        flex;
+        border-radius:
+            10px;
 
-    flex-direction:
-        column;
+        display:
+            flex;
 
-    align-items:
-        center;
+        align-items:
+            center;
 
-    gap:
-        10px;
+        justify-content:
+            center;
 
-}}
+        font-size:
+            18px;
 
+        font-weight:
+            bold;
 
-.light {{
+        transition:
+            background 0.5s;
 
-    width:
-        35px;
+    }}
 
-    height:
-        35px;
 
-    border-radius:
-        50%;
+    .signal-box {{
 
-    background:
-        #333;
+        width:
+            85px;
 
-    transition:
-        0.4s;
+        background:
+            #111;
 
-}}
+        border-radius:
+            20px;
 
+        padding:
+            12px;
 
-.active-red {{
+        display:
+            flex;
 
-    background:
-        #ef4444;
+        flex-direction:
+            column;
 
-    box-shadow:
-        0 0 25px
-        #ef4444;
+        align-items:
+            center;
 
-}}
+        gap:
+            10px;
 
+    }}
 
-.active-yellow {{
 
-    background:
-        #facc15;
+    .light {{
 
-    box-shadow:
-        0 0 25px
-        #facc15;
+        width:
+            35px;
 
-}}
+        height:
+            35px;
 
+        border-radius:
+            50%;
 
-.active-green {{
+        background:
+            #333;
 
-    background:
-        #22c55e;
+        transition:
+            0.4s;
 
-    box-shadow:
-        0 0 25px
-        #22c55e;
+    }}
 
-}}
 
+    .active-red {{
 
-.status {{
+        background:
+            #ef4444;
 
-    margin-top:
-        15px;
+        box-shadow:
+            0 0 25px
+            #ef4444;
 
-    font-size:
-        18px;
+    }}
 
-    font-weight:
-        bold;
 
-}}
+    .active-yellow {{
 
+        background:
+            #facc15;
 
-.timer {{
+        box-shadow:
+            0 0 25px
+            #facc15;
 
-    font-size:
-        34px;
+    }}
 
-    font-weight:
-        bold;
 
-    margin-top:
-        8px;
+    .active-green {{
 
-}}
+        background:
+            #22c55e;
 
+        box-shadow:
+            0 0 25px
+            #22c55e;
 
-.info {{
+    }}
 
-    margin-top:
-        25px;
 
-    text-align:
-        center;
+    .status {{
 
-    color:
-        #d1d5db;
+        margin-top:
+            15px;
 
-}}
+        font-size:
+            18px;
 
+        font-weight:
+            bold;
 
-</style>
+    }}
 
-</head>
 
+    .timer {{
 
-<body>
+        font-size:
+            34px;
 
+        font-weight:
+            bold;
 
-<div class="container">
+        margin-top:
+            8px;
 
+    }}
 
-<div class="title">
 
-🚦 AI Traffic Signal Controller
+    .info {{
 
-</div>
+        margin-top:
+            25px;
 
+        text-align:
+            center;
 
-<div class="roads">
+        color:
+            #d1d5db;
 
+    }}
 
-<!-- ROUTE A -->
 
-<div class="route">
+    </style>
 
-<div class="route-name">
+    </head>
 
-🛣️ Route A
 
-</div>
+    <body>
 
 
-<div
-    id="roadA"
-    class="road"
->
+    <div class="container">
 
-ROUTE A
 
-</div>
+    <div class="title">
 
+    🚦 AI Traffic Signal Controller
 
-<div
-    id="statusA"
-    class="status"
->
+    </div>
 
-WAITING
 
-</div>
+    <div class="roads">
 
 
-<div
-    id="timerA"
-    class="timer"
->
+    <!-- ROUTE A -->
 
---
+    <div class="route">
 
-</div>
+    <div class="route-name">
 
-</div>
+    🛣️ Route A
 
+    </div>
 
-<!-- SIGNAL -->
 
-<div class="signal-box">
+    <div
+        id="roadA"
+        class="road"
+    >
 
-<div
-    id="red"
-    class="light"
->
-</div>
+    ROUTE A
 
-<div
-    id="yellow"
-    class="light"
->
-</div>
+    </div>
 
-<div
-    id="green"
-    class="light"
->
-</div>
 
-</div>
+    <div
+        id="statusA"
+        class="status"
+    >
 
+    WAITING
 
-<!-- ROUTE B -->
+    </div>
 
-<div class="route">
 
-<div class="route-name">
+    <div
+        id="timerA"
+        class="timer"
+    >
 
-🛣️ Route B
+    --
 
-</div>
+    </div>
 
+    </div>
 
-<div
-    id="roadB"
-    class="road"
->
 
-ROUTE B
+    <!-- SIGNAL -->
 
-</div>
+    <div class="signal-box">
 
+    <div
+        id="red"
+        class="light"
+    >
+    </div>
 
-<div
-    id="statusB"
-    class="status"
->
+    <div
+        id="yellow"
+        class="light"
+    >
+    </div>
 
-WAITING
+    <div
+        id="green"
+        class="light"
+    >
+    </div>
 
-</div>
+    </div>
 
 
-<div
-    id="timerB"
-    class="timer"
->
+    <!-- ROUTE B -->
 
---
+    <div class="route">
 
-</div>
+    <div class="route-name">
 
-</div>
+    🛣️ Route B
 
+    </div>
 
-</div>
 
+    <div
+        id="roadB"
+        class="road"
+    >
 
-<div class="info">
+    ROUTE B
 
-AI Recommended Green Time:
-Route A = {route_a_green}s
-&nbsp;&nbsp;|&nbsp;&nbsp;
-Route B = {route_b_green}s
+    </div>
 
-</div>
 
+    <div
+        id="statusB"
+        class="status"
+    >
 
-</div>
+    WAITING
 
+    </div>
 
-<script>
 
+    <div
+        id="timerB"
+        class="timer"
+    >
 
-// ========================================
-// SIGNAL TIMINGS
-// ========================================
+    --
 
-const routeAGreen =
-    {route_a_green};
+    </div>
 
-const routeBGreen =
-    {route_b_green};
+    </div>
 
-const yellowTime =
-    {yellow_time};
 
+    </div>
 
-// ========================================
-// DOM ELEMENTS
-// ========================================
 
-const red =
-    document.getElementById("red");
+    <div class="info">
 
-const yellow =
-    document.getElementById("yellow");
+    AI Recommended Green Time:
+    Route A = {route_a_green}s
+    &nbsp;&nbsp;|&nbsp;&nbsp;
+    Route B = {route_b_green}s
 
-const green =
-    document.getElementById("green");
+    </div>
 
 
-const roadA =
-    document.getElementById("roadA");
+    </div>
 
-const roadB =
-    document.getElementById("roadB");
 
+    <script>
 
-const statusA =
-    document.getElementById("statusA");
 
-const statusB =
-    document.getElementById("statusB");
+    // ========================================
+    // SIGNAL TIMINGS
+    // ========================================
 
+    const routeAGreen =
+        {route_a_green};
 
-const timerA =
-    document.getElementById("timerA");
+    const routeBGreen =
+        {route_b_green};
 
-const timerB =
-    document.getElementById("timerB");
+    const yellowTime =
+        {yellow_time};
 
 
-// ========================================
-// RESET SIGNAL
-// ========================================
+    // ========================================
+    // DOM ELEMENTS
+    // ========================================
 
-function resetLights() {{
+    const red =
+        document.getElementById("red");
 
-    red.className =
-        "light";
+    const yellow =
+        document.getElementById("yellow");
 
-    yellow.className =
-        "light";
+    const green =
+        document.getElementById("green");
 
-    green.className =
-        "light";
 
-}}
+    const roadA =
+        document.getElementById("roadA");
 
+    const roadB =
+        document.getElementById("roadB");
 
-// ========================================
-// ROUTE A GREEN
-// ========================================
 
-function routeAGreenPhase(seconds) {{
+    const statusA =
+        document.getElementById("statusA");
 
-    resetLights();
+    const statusB =
+        document.getElementById("statusB");
 
-    green.className =
-        "light active-green";
 
+    const timerA =
+        document.getElementById("timerA");
 
-    roadA.style.background =
-        "#166534";
+    const timerB =
+        document.getElementById("timerB");
 
-    roadB.style.background =
-        "#7f1d1d";
 
+    // ========================================
+    // RESET SIGNAL
+    // ========================================
 
-    statusA.innerHTML =
-        "🟢 GREEN";
+    function resetLights() {{
 
-    statusB.innerHTML =
-        "🔴 STOP";
+        red.className =
+            "light";
 
+        yellow.className =
+            "light";
 
-    let remaining =
-        seconds;
+        green.className =
+            "light";
 
+    }}
 
-    timerA.innerHTML =
-        remaining + " sec";
 
+    // ========================================
+    // ROUTE A GREEN
+    // ========================================
 
-    timerB.innerHTML =
-        "WAIT";
+    function routeAGreenPhase(seconds) {{
 
+        resetLights();
 
-    const interval =
-        setInterval(() => {{
+        green.className =
+            "light active-green";
 
-        remaining--;
 
-        if (
-            remaining <= 0
-        ) {{
+        roadA.style.background =
+            "#166534";
 
-            clearInterval(interval);
+        roadB.style.background =
+            "#7f1d1d";
 
-            routeAYellowPhase();
 
-        }}
+        statusA.innerHTML =
+            "🟢 GREEN";
 
-        else {{
+        statusB.innerHTML =
+            "🔴 STOP";
 
-            timerA.innerHTML =
-                remaining + " sec";
 
-        }}
+        let remaining =
+            seconds;
 
-    }}, 1000);
 
-}}
+        timerA.innerHTML =
+            remaining + " sec";
 
 
-// ========================================
-// ROUTE A YELLOW
-// ========================================
+        timerB.innerHTML =
+            "WAIT";
 
-function routeAYellowPhase() {{
 
-    resetLights();
+        const interval =
+            setInterval(() => {{
 
-    yellow.className =
-        "light active-yellow";
+            remaining--;
 
+            if (
+                remaining <= 0
+            ) {{
 
-    roadA.style.background =
-        "#a16207";
+                clearInterval(interval);
 
+                routeAYellowPhase();
 
-    roadB.style.background =
-        "#7f1d1d";
+            }}
 
+            else {{
 
-    statusA.innerHTML =
-        "🟡 CHANGE";
+                timerA.innerHTML =
+                    remaining + " sec";
 
+            }}
 
-    statusB.innerHTML =
-        "🔴 STOP";
+        }}, 1000);
 
+    }}
 
-    let remaining =
-        yellowTime;
 
+    // ========================================
+    // ROUTE A YELLOW
+    // ========================================
 
-    timerA.innerHTML =
-        remaining + " sec";
+    function routeAYellowPhase() {{
 
+        resetLights();
 
-    const interval =
-        setInterval(() => {{
+        yellow.className =
+            "light active-yellow";
 
-        remaining--;
 
+        roadA.style.background =
+            "#a16207";
 
-        if (
-            remaining <= 0
-        ) {{
 
-            clearInterval(interval);
+        roadB.style.background =
+            "#7f1d1d";
 
-            routeBGreenPhase();
 
-        }}
+        statusA.innerHTML =
+            "🟡 CHANGE";
 
-        else {{
 
-            timerA.innerHTML =
-                remaining + " sec";
+        statusB.innerHTML =
+            "🔴 STOP";
 
-        }}
 
-    }}, 1000);
+        let remaining =
+            yellowTime;
 
-}}
 
+        timerA.innerHTML =
+            remaining + " sec";
 
-// ========================================
-// ROUTE B GREEN
-// ========================================
 
-function routeBGreenPhase(seconds) {{
+        const interval =
+            setInterval(() => {{
 
-    resetLights();
+            remaining--;
 
-    green.className =
-        "light active-green";
 
+            if (
+                remaining <= 0
+            ) {{
 
-    roadA.style.background =
-        "#7f1d1d";
+                clearInterval(interval);
 
-    roadB.style.background =
-        "#166534";
+                routeBGreenPhase();
 
+            }}
 
-    statusA.innerHTML =
-        "🔴 STOP";
+            else {{
 
-    statusB.innerHTML =
-        "🟢 GREEN";
+                timerA.innerHTML =
+                    remaining + " sec";
 
+            }}
 
-    let remaining =
-        seconds;
+        }}, 1000);
 
+    }}
 
-    timerA.innerHTML =
-        "WAIT";
 
+    // ========================================
+    // ROUTE B GREEN
+    // ========================================
 
-    timerB.innerHTML =
-        remaining + " sec";
+    function routeBGreenPhase(seconds) {{
 
+        resetLights();
 
-    const interval =
-        setInterval(() => {{
+        green.className =
+            "light active-green";
 
-        remaining--;
 
+        roadA.style.background =
+            "#7f1d1d";
 
-        if (
-            remaining <= 0
-        ) {{
+        roadB.style.background =
+            "#166534";
 
-            clearInterval(interval);
 
-            routeBYellowPhase();
+        statusA.innerHTML =
+            "🔴 STOP";
 
-        }}
+        statusB.innerHTML =
+            "🟢 GREEN";
 
-        else {{
 
-            timerB.innerHTML =
-                remaining + " sec";
+        let remaining =
+            seconds;
 
-        }}
 
-    }}, 1000);
+        timerA.innerHTML =
+            "WAIT";
 
-}}
 
+        timerB.innerHTML =
+            remaining + " sec";
 
-// ========================================
-// ROUTE B YELLOW
-// ========================================
 
-function routeBYellowPhase() {{
+        const interval =
+            setInterval(() => {{
 
-    resetLights();
+            remaining--;
 
-    yellow.className =
-        "light active-yellow";
 
+            if (
+                remaining <= 0
+            ) {{
 
-    roadA.style.background =
-        "#7f1d1d";
+                clearInterval(interval);
 
-    roadB.style.background =
-        "#a16207";
+                routeBYellowPhase();
 
+            }}
 
-    statusA.innerHTML =
-        "🔴 STOP";
+            else {{
 
-    statusB.innerHTML =
-        "🟡 CHANGE";
+                timerB.innerHTML =
+                    remaining + " sec";
 
+            }}
 
-    let remaining =
-        yellowTime;
+        }}, 1000);
 
+    }}
 
-    timerB.innerHTML =
-        remaining + " sec";
 
+    // ========================================
+    // ROUTE B YELLOW
+    // ========================================
 
-    const interval =
-        setInterval(() => {{
+    function routeBYellowPhase() {{
 
-        remaining--;
+        resetLights();
 
+        yellow.className =
+            "light active-yellow";
 
-        if (
-            remaining <= 0
-        ) {{
 
-            clearInterval(interval);
+        roadA.style.background =
+            "#7f1d1d";
 
-            routeAGreenPhase(
-                routeAGreen
-            );
+        roadB.style.background =
+            "#a16207";
 
-        }}
 
-        else {{
+        statusA.innerHTML =
+            "🔴 STOP";
 
-            timerB.innerHTML =
-                remaining + " sec";
+        statusB.innerHTML =
+            "🟡 CHANGE";
 
-        }}
 
-    }}, 1000);
+        let remaining =
+            yellowTime;
 
-}}
 
+        timerB.innerHTML =
+            remaining + " sec";
 
-// ========================================
-// START SYSTEM
-// ========================================
 
-routeAGreenPhase(
-    routeAGreen
-);
+        const interval =
+            setInterval(() => {{
 
+            remaining--;
 
-</script>
 
+            if (
+                remaining <= 0
+            ) {{
 
-</body>
+                clearInterval(interval);
 
-</html>
+                routeAGreenPhase(
+                    routeAGreen
+                );
 
-"""
+            }}
 
+            else {{
 
-# ==========================================
-# DISPLAY COMPONENT
-# ==========================================
+                timerB.innerHTML =
+                    remaining + " sec";
 
-components.html(
-    signal_html,
-    height=430,
-    scrolling=False
-)
+            }}
 
-# ==========================================
-# FOOTER
-# ==========================================
+        }}, 1000);
 
-st.divider()
+    }}
 
-st.caption(
+
+    // ========================================
+    // START SYSTEM
+    // ========================================
+
+    routeAGreenPhase(
+        routeAGreen
+    );
+
+
+    </script>
+
+
+    </body>
+
+    </html>
+
+    """
+
+
+    # ==========================================
+    # DISPLAY COMPONENT
+    # ==========================================
+
+    components.html(
+        signal_html,
+        height=430,
+        scrolling=False
+    )
+
+
+
+    # ==========================================
+    # REAL-TIME AI RESULTS
+    # ==========================================
+
+    st.divider()
+
+    st.subheader("🤖 Real-Time AI Traffic Analysis")
+
+    col1, col2 = st.columns(2)
+
+
+    with col1:
+
+        st.markdown("### 🛣️ Route A")
+
+        st.metric(
+            "Total Vehicles",
+            total_a
+        )
+
+        st.metric(
+            "Density",
+            f"{density_a * 100:.1f}%"
+        )
+
+        st.metric(
+            "AI Congestion",
+            congestion_a
+        )
+
+        st.metric(
+        "Traffic Share",
+        f"{share_a*100:.1f}%"
+        )
+
+        st.metric(
+        "AI Green Time",
+        f"{green_a} sec"
+        )
+
+
+    with col2:
+
+        st.markdown("### 🛣️ Route B")
+
+        st.metric(
+            "Total Vehicles",
+            total_b
+        )
+
+        st.metric(
+            "Density",
+            f"{density_b * 100:.1f}%"
+        )
+
+        st.metric(
+            "AI Congestion",
+            congestion_b
+        )
+
+        st.metric(
+        "Traffic Share",
+        f"{share_b*100:.1f}%"
+        )
+
+        st.metric(
+        "AI Green Time",
+        f"{green_b} sec"
+        )
+
+    # ==========================================
+    # FOOTER
+    # ==========================================
+
+    st.divider()
+
+    st.caption(
     "AI Traffic Intelligence System | "
     "YOLO + Computer Vision + Machine Learning + Streamlit"
 )

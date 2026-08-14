@@ -1,4 +1,5 @@
 import pandas as pd
+import joblib
 
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
@@ -161,6 +162,13 @@ print(
     "Random Forest training completed!"
 )
 
+joblib.dump(
+    model,
+    "traffic_model.pkl"
+)
+
+print("Model saved successfully!")
+print("Saved as: traffic_model.pkl")
 
 # ==========================================
 # 7. PREDICTION

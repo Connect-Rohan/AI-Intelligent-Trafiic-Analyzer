@@ -1,106 +1,50 @@
-import pandas as pd
-
 # ==========================================
-# LOAD TRAFFIC DATA
-# ==========================================
-
-data = pd.read_csv(
-    "data/traffic_ml_dataset.csv"
-)
-
-
-# ==========================================
-# GET LATEST DATA FOR EACH ROUTE
-# ==========================================
-
-latest_routes = (
-    data.sort_values("Time_Seconds")
-    .groupby("Route")
-    .tail(1)
-    .copy()
-)
-
-
-# ==========================================
-# CALCULATE TRAFFIC DEMAND
-# ==========================================
-
-total_vehicles = latest_routes[
-    "Total_Vehicles"
-].sum()
-
-latest_routes["Traffic_Share"] = (
-    latest_routes["Total_Vehicles"]
-    / total_vehicles
-)
-
-
-# ==========================================
-# TOTAL SIGNAL CYCLE
+# SIGNAL OPTIMIZER
 # ==========================================
 
 TOTAL_SIGNAL_TIME = 90
 
 
-# ==========================================
-# ALLOCATE GREEN TIME
-# ==========================================
+def optimize_signals(route_a, route_b):
 
-latest_routes["Recommended_Green_Time"] = (
-    latest_routes["Traffic_Share"]
-    * TOTAL_SIGNAL_TIME
-)
-
-
-# ==========================================
-# ROUND VALUES
-# ==========================================
-
-latest_routes[
-    "Recommended_Green_Time"
-] = latest_routes[
-    "Recommended_Green_Time"
-].round().astype(int)
-
-
-# ==========================================
-# DISPLAY RESULT
-# ==========================================
-
-print("\n========================================")
-print("INTELLIGENT SIGNAL OPTIMIZATION")
-print("========================================")
-
-for _, row in latest_routes.iterrows():
-
-    print(
-        f"\n{row['Route']}"
+    total = (
+        route_a["Total_Vehicles"] +
+        route_b["Total_Vehicles"]
     )
 
-    print(
-        f"Vehicles: "
-        f"{int(row['Total_Vehicles'])}"
+    if total == 0:
+
+        return {
+            "Route A": 45,
+            "Route B": 45
+        }
+
+    share_a = (
+        route_a["Total_Vehicles"] / total
     )
 
-    print(
-        f"Density: "
-        f"{row['Density'] * 100:.1f}%"
+    share_b = (
+        route_b["Total_Vehicles"] / total
     )
 
-    print(
-        f"Traffic Share: "
-        f"{row['Traffic_Share'] * 100:.1f}%"
+    green_a = round(
+        share_a * TOTAL_SIGNAL_TIME
     )
 
-    print(
-        f"Recommended Green Time: "
-        f"{row['Recommended_Green_Time']} seconds"
+    green_b = round(
+        share_b * TOTAL_SIGNAL_TIME
     )
 
+    return {
 
-print("\n========================================")
-print(
-    f"Total Signal Cycle: "
-    f"{TOTAL_SIGNAL_TIME} seconds"
-)
-print("========================================")
+        "Route A": {
+            "Traffic_Share": share_a,
+            "Green_Time": green_a
+        },
+
+        "Route B": {
+            "Traffic_Share": share_b,
+            "Green_Time": green_b
+        }
+
+    }

@@ -15,8 +15,17 @@ def optimize_signals(route_a, route_b):
     if total == 0:
 
         return {
-            "Route A": 45,
-            "Route B": 45
+
+            "Route A": {
+                "Traffic_Share": 0.5,
+                "Green_Time": 45
+            },
+
+            "Route B": {
+                "Traffic_Share": 0.5,
+                "Green_Time": 45
+            }
+
         }
 
     share_a = (

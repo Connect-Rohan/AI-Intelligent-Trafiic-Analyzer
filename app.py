@@ -213,16 +213,52 @@ footer { visibility: hidden; }
 
 /* ---- Dashboard title ---- */
 .dash-title {
-    font-size: 32px;
+    font-size: 36px;
     font-weight: 800;
     color: #0f172a;
-    letter-spacing: -0.5px;
+    letter-spacing: -1px;
     margin-bottom: 4px;
+    text-align: center;
 }
 .dash-subtitle {
     font-size: 14px;
     color: #64748b;
     margin-bottom: 24px;
+    text-align: center;
+}
+.page-hero {
+    text-align: center;
+    padding: 28px 0 18px;
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: 24px;
+}
+.page-hero .hero-badge {
+    display: inline-block;
+    background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 4px 18px;
+    border-radius: 999px;
+    margin-bottom: 14px;
+}
+.page-hero .hero-title {
+    font-size: 40px;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -1.5px;
+    line-height: 1.1;
+    margin-bottom: 10px;
+}
+.page-hero .hero-sub {
+    font-size: 15px;
+    color: #64748b;
+    font-weight: 400;
+    max-width: 580px;
+    margin: 0 auto;
+    line-height: 1.6;
 }
 
 /* ---- Simulation section title ---- */
@@ -265,12 +301,17 @@ hr {
 
 
 # ==========================================
-# TITLE
+# TITLE — centered hero at top of page
 # ==========================================
 
 st.markdown("""
-<div class="dash-title">🚦 AI Traffic Intelligence System</div>
-<div class="dash-subtitle">AI-powered traffic monitoring, congestion prediction and intelligent signal optimization.</div>
+<div class="page-hero">
+    <div class="hero-badge">🚦 &nbsp; AI Powered &nbsp; 🚦</div>
+    <div class="hero-title">AI Traffic Intelligence System</div>
+    <div class="hero-sub">
+        Computer-vision traffic monitoring &nbsp;·&nbsp; ML congestion prediction &nbsp;·&nbsp; Intelligent signal optimization
+    </div>
+</div>
 """, unsafe_allow_html=True)
 
 
@@ -348,96 +389,100 @@ latest_routes["Green_Time"] = (
 
 
 # ==========================================
-# OVERVIEW
+# OVERVIEW helper — rendered inside each mode
 # ==========================================
 
-st.markdown('<div class="dash-header">📊 Traffic Overview</div>', unsafe_allow_html=True)
+def render_traffic_overview(routes_df, label=None):
+    """Render the 4 Traffic Overview cards. Call from inside each mode."""
+    if label:
+        st.markdown(f'<div class="dash-header">📊 Traffic Overview{" — " + label if label else ""}</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="dash-header">📊 Traffic Overview</div>', unsafe_allow_html=True)
 
-average_density = (
-    latest_routes["Density"].mean()
-    * 100
-)
+    _total_v  = routes_df["Total_Vehicles"].sum()
+    _avg_den  = routes_df["Density"].mean() * 100
+    _hi_route = routes_df.loc[routes_df["Total_Vehicles"].idxmax()]
 
-highest_route = latest_routes.loc[
-    latest_routes["Total_Vehicles"].idxmax()
-]
-
-ov1, ov2, ov3, ov4 = st.columns(4)
-
-with ov1:
-    st.markdown(f"""
-    <div class="ov-card">
-        <div class="ov-icon">🚗</div>
-        <div class="ov-val">{int(total_vehicles)}</div>
-        <div class="ov-label">Total Vehicles</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-with ov2:
-    st.markdown(f"""
-    <div class="ov-card">
-        <div class="ov-icon">🛣️</div>
-        <div class="ov-val">{len(latest_routes)}</div>
-        <div class="ov-label">Active Routes</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-with ov3:
-    st.markdown(f"""
-    <div class="ov-card">
-        <div class="ov-icon">📊</div>
-        <div class="ov-val">{average_density:.1f}%</div>
-        <div class="ov-label">Avg Density</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-with ov4:
-    st.markdown(f"""
-    <div class="ov-card">
-        <div class="ov-icon">⚠️</div>
-        <div class="ov-val">{highest_route['Route']}</div>
-        <div class="ov-label">Highest Traffic</div>
-    </div>
-    """, unsafe_allow_html=True)
-
+    ov1, ov2, ov3, ov4 = st.columns(4)
+    with ov1:
+        st.markdown(f"""
+        <div class="ov-card">
+            <div class="ov-icon">🚗</div>
+            <div class="ov-val">{int(_total_v)}</div>
+            <div class="ov-label">Total Vehicles</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with ov2:
+        st.markdown(f"""
+        <div class="ov-card">
+            <div class="ov-icon">🛣️</div>
+            <div class="ov-val">{len(routes_df)}</div>
+            <div class="ov-label">Active Routes</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with ov3:
+        st.markdown(f"""
+        <div class="ov-card">
+            <div class="ov-icon">📊</div>
+            <div class="ov-val">{_avg_den:.1f}%</div>
+            <div class="ov-label">Avg Density</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with ov4:
+        st.markdown(f"""
+        <div class="ov-card">
+            <div class="ov-icon">⚠️</div>
+            <div class="ov-val">{_hi_route['Route']}</div>
+            <div class="ov-label">Highest Traffic</div>
+        </div>
+        """, unsafe_allow_html=True)
 
 
 # ==========================================
-# AI MODEL PERFORMANCE
+# AI MODEL PERFORMANCE helper
 # ==========================================
 
-try:
-    if os.path.exists('model_metrics.pkl'):
-        metrics = joblib.load('model_metrics.pkl')
-        with st.expander("🔍 View AI Model Performance Details"):
-            st.markdown("### ML Congestion-Classification Metrics")
-            m_col1, m_col2, m_col3, m_col4 = st.columns(4)
-            m_col1.metric("Accuracy", f"{metrics.get('accuracy', 0)*100:.2f}%")
-            m_col2.metric("Precision", f"{metrics.get('precision', 0)*100:.2f}%")
-            m_col3.metric("Recall", f"{metrics.get('recall', 0)*100:.2f}%")
-            m_col4.metric("F1 Score", f"{metrics.get('f1_score', 0)*100:.2f}%")
-            
-            st.markdown(f"**Evaluation Samples:** {metrics.get('evaluation_samples', 0)}")
-            st.markdown(f"**Classes Evaluated:** {', '.join(metrics.get('labels', []))}")
-            
-            st.markdown("#### Confusion Matrix")
-            cm = metrics.get("confusion_matrix")
-            labels = metrics.get("labels", [])
-            if cm and labels:
-                header = "| Actual / Predicted | " + " | ".join(labels) + " |"
-                separator = "|---|" + "|".join(["---"] * len(labels)) + "|"
-                st.markdown(header)
-                st.markdown(separator)
-                for i, row in enumerate(cm):
-                    row_str = " | ".join([str(x) for x in row])
-                    st.markdown(f"| **{labels[i]}** | {row_str} |")
-except Exception as e:
-    st.error(f"Error loading model metrics: {e}")
+def render_model_performance():
+    """Render AI model performance expander."""
+    try:
+        if os.path.exists('model_metrics.pkl'):
+            metrics = joblib.load('model_metrics.pkl')
+            with st.expander("🔍 View AI Model Performance Details"):
+                st.markdown("### ML Congestion-Classification Metrics")
+                m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+                m_col1.metric("Accuracy",  f"{metrics.get('accuracy',  0)*100:.2f}%")
+                m_col2.metric("Precision", f"{metrics.get('precision', 0)*100:.2f}%")
+                m_col3.metric("Recall",    f"{metrics.get('recall',    0)*100:.2f}%")
+                m_col4.metric("F1 Score",  f"{metrics.get('f1_score',  0)*100:.2f}%")
+                st.markdown(f"**Evaluation Samples:** {metrics.get('evaluation_samples', 0)}")
+                st.markdown(f"**Classes Evaluated:** {', '.join(metrics.get('labels', []))}")
+                st.markdown("#### Confusion Matrix")
+                cm     = metrics.get("confusion_matrix")
+                labels = metrics.get("labels", [])
+                if cm and labels:
+                    header    = "| Actual / Predicted | " + " | ".join(labels) + " |"
+                    separator = "|---|" + "|".join(["---"] * len(labels)) + "|"
+                    st.markdown(header)
+                    st.markdown(separator)
+                    for i, row in enumerate(cm):
+                        row_str = " | ".join([str(x) for x in row])
+                        st.markdown(f"| **{labels[i]}** | {row_str} |")
+    except Exception as e:
+        st.error(f"Error loading model metrics: {e}")
 
 
 # ==========================================
-# DASHBOARD MODE
+# LIVE OVERVIEW DATAFRAME HELPER
 # ==========================================
+
+def _live_overview_to_df(total_a, total_b, den_a, den_b):
+    """Convert live analysis totals into a minimal DataFrame
+    that render_traffic_overview can consume."""
+    return pd.DataFrame([
+        {"Route": "Route A", "Total_Vehicles": total_a, "Density": den_a},
+        {"Route": "Route B", "Total_Vehicles": total_b, "Density": den_b},
+    ])
+
 
 st.divider()
 
@@ -453,6 +498,46 @@ mode = st.radio(
 st.divider()
 
 if mode == "📹 Camera Monitoring":
+    # ==========================================
+    # SESSION STATE INITIALISATION
+    # ==========================================
+    # Signal state
+    if "sig_phase" not in st.session_state:
+        st.session_state.sig_phase = "A_GREEN"          # A_GREEN | A_YELLOW | B_GREEN | B_YELLOW
+    if "sig_start_ts" not in st.session_state:
+        st.session_state.sig_start_ts = None            # time.time() when phase started
+    if "sig_phase_duration" not in st.session_state:
+        st.session_state.sig_phase_duration = 0         # total seconds for current phase
+    # Current plan
+    if "cur_green_a" not in st.session_state:
+        st.session_state.cur_green_a = 30
+    if "cur_green_b" not in st.session_state:
+        st.session_state.cur_green_b = 30
+    # Next plan (applied at next phase transition)
+    if "next_green_a" not in st.session_state:
+        st.session_state.next_green_a = None
+    if "next_green_b" not in st.session_state:
+        st.session_state.next_green_b = None
+    # Analysis state
+    if "live_analysis_started" not in st.session_state:
+        st.session_state.live_analysis_started = False
+    if "live_analysis_running_v2" not in st.session_state:
+        st.session_state.live_analysis_running_v2 = False
+    if "live_overview_data" not in st.session_state:
+        st.session_state.live_overview_data = None      # dict of latest route data
+    if "latest_window_start" not in st.session_state:
+        st.session_state.latest_window_start = 0
+    if "latest_window_end" not in st.session_state:
+        st.session_state.latest_window_end = 5
+    if "completed_windows" not in st.session_state:
+        st.session_state.completed_windows = []         # list of completed (start, end) tuples
+    if "next_plan_info" not in st.session_state:
+        st.session_state.next_plan_info = None          # dict {green_a, green_b} to show in UI
+
+    # ==========================================
+    # YELLOW_TIME constant
+    # ==========================================
+    YELLOW_TIME = 3
 
     def get_route_color(level):
         if level == "Low": return "#22c55e"
@@ -623,142 +708,521 @@ if mode == "📹 Camera Monitoring":
         '''
         return html
 
-    st.divider()
+    # ==========================================
+    # CAMERA PAGE HEADER
+    # ==========================================
 
     st.markdown('''
-    <div class="dash-title" style="font-size:24px;">🎥 AI Live Traffic Monitoring</div>
-    <div style="font-size:13px; font-weight:700; color:#dc2626; letter-spacing:1px; margin-bottom:16px;">● LIVE ANALYSIS READY</div>
+    <div class="dash-title" style="font-size:26px; text-align:left;">🎥 AI Live Traffic Monitoring</div>
+    <div class="dash-subtitle" style="text-align:left; margin-bottom:18px;">Upload route videos and start live AI analysis — signal control activates automatically.</div>
     ''', unsafe_allow_html=True)
 
+    # ==========================================
+    # VIDEO UPLOAD SECTION (always visible)
+    # ==========================================
     up_col1, up_col2 = st.columns(2)
-    
     with up_col1:
-        st.markdown("### 🛣️ Route A Window")
-        route_a_file = st.file_uploader("Upload Route A Video", type=["mp4", "avi", "mov", "mkv"], key="upload_a")
-    
+        st.markdown("#### 📹 Route A Video")
+        route_a_file = st.file_uploader("Upload Route A Video", type=["mp4", "avi", "mov", "mkv"], key="upload_a", label_visibility="collapsed")
     with up_col2:
-        st.markdown("### 🛣️ Route B Window")
-        route_b_file = st.file_uploader("Upload Route B Video", type=["mp4", "avi", "mov", "mkv"], key="upload_b")
+        st.markdown("#### 📹 Route B Video")
+        route_b_file = st.file_uploader("Upload Route B Video", type=["mp4", "avi", "mov", "mkv"], key="upload_b", label_visibility="collapsed")
 
+    # Preview uploaded videos before analysis
+    if route_a_file and route_b_file and not st.session_state.get("live_analysis_running_v2", False) and not st.session_state.get("live_analysis_started", False):
+        prev_col1, prev_col2 = st.columns(2)
+        with prev_col1:
+            st.video(route_a_file)
+        with prev_col2:
+            st.video(route_b_file)
+
+    # Start button (only when both videos uploaded and not yet running)
     if route_a_file and route_b_file:
-        
         os.makedirs("videos", exist_ok=True)
         temp_a_path = os.path.join("videos", "upload_route_a_temp.mp4")
         temp_b_path = os.path.join("videos", "upload_route_b_temp.mp4")
-        
-        if st.button("▶ Start Live AI Analysis"):
-            with open(temp_a_path, "wb") as f:
-                f.write(route_a_file.read())
-            with open(temp_b_path, "wb") as f:
-                f.write(route_b_file.read())
-            
-            st.session_state.live_analysis_running_v2 = True
-            
-        if not st.session_state.get("live_analysis_running_v2", False):
-            st.divider()
-            video_col1, video_col2 = st.columns(2)
-            with video_col1:
-                st.video(route_a_file)
-            with video_col2:
-                st.video(route_b_file)
 
+        if not st.session_state.get("live_analysis_running_v2", False) and not st.session_state.get("live_analysis_started", False):
+            if st.button("▶ Start Live AI Analysis", type="primary", use_container_width=True):
+                with open(temp_a_path, "wb") as f:
+                    f.write(route_a_file.read())
+                with open(temp_b_path, "wb") as f:
+                    f.write(route_b_file.read())
+                # Reset signal state for fresh run
+                st.session_state.sig_phase           = "A_GREEN"
+                st.session_state.sig_start_ts        = None
+                st.session_state.sig_phase_duration  = 0
+                st.session_state.cur_green_a         = 30
+                st.session_state.cur_green_b         = 30
+                st.session_state.next_green_a        = None
+                st.session_state.next_green_b        = None
+                st.session_state.completed_windows   = []
+                st.session_state.live_overview_data  = None
+                st.session_state.next_plan_info      = None
+                st.session_state.live_analysis_started     = True
+                st.session_state.live_analysis_running_v2  = True
+
+        # ==========================================
+        # ANALYSIS LOOP
+        # ==========================================
         if st.session_state.get("live_analysis_running_v2", False):
-            
+
             st.divider()
-            
-            status_container = st.empty()
-            videos_container = st.empty()
-            visualizer_container = st.empty()
-            
+
+            # --- Status row ---
+            status_placeholder = st.empty()
+
+            # --- Two-column dashboard area ---
+            dash_placeholder = st.empty()
+
+            # --- Traffic Map (below the dashboard) ---
+            map_placeholder = st.empty()
+
+            # --- Traffic Overview (below map, after first analysis) ---
+            overview_placeholder = st.empty()
+
             try:
                 fps_a, total_frames_a, duration_a = get_video_info(temp_a_path)
                 fps_b, total_frames_b, duration_b = get_video_info(temp_b_path)
-                
+
                 max_duration = max(duration_a, duration_b)
-                current_sec = 0
-                
+                current_sec  = 0
+
+                # Helper to compute analysis-driven signal HTML
+                # Key principle: new prediction → next_plan; current countdown continues in JS
+                def _make_signal_html(initial_green_a, initial_green_b, yl=3,
+                                      next_a=None, next_b=None, window_label=""):
+                    """
+                    Renders a live signal controller HTML.
+                    - initial_green_a/b: green times for the FIRST plan
+                    - next_a/next_b: next-plan values shown in a queue panel but not applied yet
+                    - The JS controller runs initial_green_a → yellow → initial_green_b → yellow → loop
+                      but on each phase-end it checks window.nextPlanA / window.nextPlanB and
+                      applies them as the NEW durations for the following cycle.
+                    """
+                    total_cycle = initial_green_a + yl + initial_green_b + yl
+                    next_info_html = ""
+                    if next_a is not None and next_b is not None:
+                        next_info_html = f"""
+                        <div class="next-plan">
+                            <div class="next-plan-title">⏭ Next Predicted Plan (queued)</div>
+                            <div class="next-plan-row"><span>Route A Green</span><strong>{next_a}s</strong></div>
+                            <div class="next-plan-row"><span>Route B Green</span><strong>{next_b}s</strong></div>
+                        </div>
+                        """
+                    return f'''<!DOCTYPE html>
+<html>
+<head>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+* {{ box-sizing: border-box; margin: 0; padding: 0; }}
+body {{ font-family: 'Inter', Arial, sans-serif; background: transparent; }}
+.container {{ width: 100%; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1px solid #e2e8f0; border-radius: 20px; padding: 20px 18px 16px; color: #0f172a; }}
+.ctrl-title {{ text-align: center; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #64748b; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; }}
+.roads {{ display: flex; align-items: stretch; justify-content: space-between; gap: 12px; }}
+.route {{ flex: 1; background: #f1f5f9; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 14px 12px; text-align: center; transition: border-color 0.4s; }}
+.route-name {{ font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #475569; margin-bottom: 10px; }}
+.road {{ height: 50px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; transition: background 0.5s ease; background: #cbd5e1; color: #475569; }}
+.signal-box {{ width: 64px; background: #e2e8f0; border: 2px solid #cbd5e1; border-radius: 32px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; gap: 10px; flex-shrink: 0; box-shadow: 0 4px 20px rgba(0,0,0,0.12); }}
+.light {{ width: 38px; height: 38px; border-radius: 50%; background: #cbd5e1; transition: background 0.4s, box-shadow 0.4s; }}
+.active-red {{ background: #ef4444; box-shadow: 0 0 18px #ef4444, 0 0 36px rgba(239,68,68,0.4); }}
+.active-yellow {{ background: #facc15; box-shadow: 0 0 18px #facc15, 0 0 36px rgba(250,204,21,0.4); }}
+.active-green {{ background: #22c55e; box-shadow: 0 0 18px #22c55e, 0 0 36px rgba(34,197,94,0.4); }}
+.status {{ margin-top: 10px; display: inline-block; padding: 3px 12px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; background: #e2e8f0; color: #64748b; transition: background 0.5s, color 0.5s; }}
+.status-green  {{ background: #dcfce7; color: #16a34a; }}
+.status-yellow {{ background: #fef9c3; color: #ca8a04; }}
+.status-red    {{ background: #fee2e2; color: #dc2626; }}
+.timer {{ font-size: 32px; font-weight: 800; margin-top: 8px; font-family: 'Inter', monospace; color: #0f172a; letter-spacing: -1px; min-height: 40px; line-height: 1; transition: color 0.5s; }}
+.timer-green  {{ color: #16a34a; }}
+.timer-yellow {{ color: #ca8a04; }}
+.timer-red    {{ color: #dc2626; }}
+.info {{ margin-top: 14px; padding-top: 12px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 10px; color: #64748b; letter-spacing: 0.5px; }}
+.info span {{ color: #374151; font-weight: 600; }}
+.next-plan {{ margin-top: 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px 12px; }}
+.next-plan-title {{ font-size: 10px; font-weight: 700; color: #3b82f6; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }}
+.next-plan-row {{ display: flex; justify-content: space-between; font-size: 11px; color: #1e40af; margin-bottom: 4px; }}
+.next-plan-row strong {{ font-weight: 700; }}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="ctrl-title">🚦 &nbsp; AI Live Signal Controller &nbsp; 🚦</div>
+<div class="roads">
+<div class="route" id="routeBoxA">
+  <div class="route-name">Route A</div>
+  <div id="roadA" class="road">← ROUTE A →</div>
+  <div id="statusA" class="status">WAITING</div>
+  <div id="timerA" class="timer">--</div>
+</div>
+<div class="signal-box">
+  <div id="red" class="light"></div>
+  <div id="yellow" class="light"></div>
+  <div id="green" class="light"></div>
+</div>
+<div class="route" id="routeBoxB">
+  <div class="route-name">Route B</div>
+  <div id="roadB" class="road">← ROUTE B →</div>
+  <div id="statusB" class="status">WAITING</div>
+  <div id="timerB" class="timer">--</div>
+</div>
+</div>
+<div class="info">AI Green Time &nbsp;|&nbsp; A = <span id="infoA">{initial_green_a}s</span> &nbsp;·&nbsp; B = <span id="infoB">{initial_green_b}s</span> &nbsp;·&nbsp; Cycle = <span>{total_cycle}s</span></div>
+{next_info_html}
+</div>
+<script>
+// Current plan (may be updated from next-plan at phase boundary)
+var curA = {initial_green_a};
+var curB = {initial_green_b};
+const yT  = {yl};
+// Next plan injected from Python via data attribute on body
+window.nextPlanA = {next_a if next_a is not None else 'null'};
+window.nextPlanB = {next_b if next_b is not None else 'null'};
+const red=document.getElementById("red"), yellow=document.getElementById("yellow"), green=document.getElementById("green");
+const roadA=document.getElementById("roadA"), roadB=document.getElementById("roadB");
+const statusA=document.getElementById("statusA"), statusB=document.getElementById("statusB");
+const timerA=document.getElementById("timerA"), timerB=document.getElementById("timerB");
+const routeBoxA=document.getElementById("routeBoxA"), routeBoxB=document.getElementById("routeBoxB");
+function resetLights(){{ red.className="light"; yellow.className="light"; green.className="light"; }}
+function applyNextPlan(){{
+    if(window.nextPlanA !== null && window.nextPlanB !== null){{
+        curA = window.nextPlanA; curB = window.nextPlanB;
+        window.nextPlanA = null; window.nextPlanB = null;
+    }}
+}}
+function routeAGreenPhase(seconds){{
+    resetLights(); green.className="light active-green";
+    roadA.style.background="#166534"; roadB.style.background="#450a0a";
+    statusA.innerHTML="🟢 GREEN"; statusA.className="status status-green";
+    statusB.innerHTML="🔴 STOP";  statusB.className="status status-red";
+    routeBoxA.style.borderColor="#22c55e"; routeBoxB.style.borderColor="#ef4444";
+    let remaining=seconds;
+    timerA.innerHTML=remaining+"s"; timerA.className="timer timer-green";
+    timerB.innerHTML="WAIT";       timerB.className="timer timer-red";
+    const iv=setInterval(()=>{{
+        remaining--;
+        if(remaining<=0){{ clearInterval(iv); routeAYellowPhase(); }}
+        else {{ timerA.innerHTML=remaining+"s"; }}
+    }}, 1000);
+}}
+function routeAYellowPhase(){{
+    resetLights(); yellow.className="light active-yellow";
+    roadA.style.background="#713f12"; roadB.style.background="#450a0a";
+    statusA.innerHTML="🟡 CHANGE"; statusA.className="status status-yellow";
+    statusB.innerHTML="🔴 STOP";   statusB.className="status status-red";
+    routeBoxA.style.borderColor="#facc15";
+    let remaining=yT;
+    timerA.innerHTML=remaining+"s"; timerA.className="timer timer-yellow";
+    const iv=setInterval(()=>{{
+        remaining--;
+        if(remaining<=0){{ clearInterval(iv); applyNextPlan(); routeBGreenPhase(curB); }}
+        else {{ timerA.innerHTML=remaining+"s"; }}
+    }}, 1000);
+}}
+function routeBGreenPhase(seconds){{
+    resetLights(); green.className="light active-green";
+    roadA.style.background="#450a0a"; roadB.style.background="#166534";
+    statusA.innerHTML="🔴 STOP";  statusA.className="status status-red";
+    statusB.innerHTML="🟢 GREEN"; statusB.className="status status-green";
+    routeBoxA.style.borderColor="#ef4444"; routeBoxB.style.borderColor="#22c55e";
+    let remaining=seconds;
+    timerA.innerHTML="WAIT";        timerA.className="timer timer-red";
+    timerB.innerHTML=remaining+"s"; timerB.className="timer timer-green";
+    const iv=setInterval(()=>{{
+        remaining--;
+        if(remaining<=0){{ clearInterval(iv); routeBYellowPhase(); }}
+        else {{ timerB.innerHTML=remaining+"s"; }}
+    }}, 1000);
+}}
+function routeBYellowPhase(){{
+    resetLights(); yellow.className="light active-yellow";
+    roadA.style.background="#450a0a"; roadB.style.background="#713f12";
+    statusA.innerHTML="🔴 STOP";   statusA.className="status status-red";
+    statusB.innerHTML="🟡 CHANGE"; statusB.className="status status-yellow";
+    routeBoxB.style.borderColor="#facc15";
+    let remaining=yT;
+    timerB.innerHTML=remaining+"s"; timerB.className="timer timer-yellow";
+    const iv=setInterval(()=>{{
+        remaining--;
+        if(remaining<=0){{ clearInterval(iv); applyNextPlan(); routeAGreenPhase(curA); }}
+        else {{ timerB.innerHTML=remaining+"s"; }}
+    }}, 1000);
+}}
+routeAGreenPhase(curA);
+</script>
+</body>
+</html>'''
+
+                # ==========================================
+                # CONGESTION BADGE HELPER (reused from Sim Dashboard)
+                # ==========================================
+                def _congestion_badge(level):
+                    badge_class = {
+                        "Low":      "badge-low",
+                        "Moderate": "badge-moderate",
+                        "High":     "badge-high",
+                        "Critical": "badge-critical"
+                    }.get(level, "badge-high")
+                    return f'<span class="badge {badge_class}">{level}</span>'
+
+                # ==========================================
+                # ANALYSIS WINDOW LOOP
+                # ==========================================
+                first_result = True
+
                 while current_sec < max_duration:
                     end_sec = current_sec + 5
                     progress_ratio = min(1.0, current_sec / max_duration)
-                    
-                    with status_container.container():
-                        st.markdown(f"**ANALYSIS STATUS**")
-                        st.markdown(f"Currently analyzing: {current_sec}–{end_sec} seconds")
+
+                    # --- Status panel ---
+                    with status_placeholder.container():
+                        st.markdown(
+                            f'<div class="dash-header">📡 ANALYZING LIVE TRAFFIC</div>',
+                            unsafe_allow_html=True
+                        )
+                        completed_html = ""
+                        for (ws, we) in st.session_state.completed_windows:
+                            completed_html += f'<span style="color:#16a34a; font-weight:700;">✓ {ws}–{we}s</span> &nbsp; '
+                        current_html = f'<span style="color:#f97316; font-weight:700;">⟳ {current_sec}–{end_sec}s — Analyzing...</span>'
+                        st.markdown(
+                            f'<div style="font-size:13px; margin:8px 0;">{completed_html}{current_html}</div>',
+                            unsafe_allow_html=True
+                        )
                         st.progress(progress_ratio)
-                    
+
+                    # --- Run backend analysis (UNCHANGED) ---
                     results_a = analyze_video_window(temp_a_path, current_sec, 5)
                     results_b = analyze_video_window(temp_b_path, current_sec, 5)
-                    
+
                     if not results_a and not results_b:
                         break
-                        
-                    if not results_a: results_a = {"Cars": 0, "Motorcycles": 0, "Buses": 0, "Trucks": 0, "Total_Vehicles": 0}
-                    if not results_b: results_b = {"Cars": 0, "Motorcycles": 0, "Buses": 0, "Trucks": 0, "Total_Vehicles": 0}
-                        
-                    pred_a, total_a, den_a = predict_congestion(model, results_a["Cars"], results_a["Motorcycles"], results_a["Buses"], results_a["Trucks"])
-                    pred_b, total_b, den_b = predict_congestion(model, results_b["Cars"], results_b["Motorcycles"], results_b["Buses"], results_b["Trucks"])
-                    
+
+                    if not results_a:
+                        results_a = {"Cars": 0, "Motorcycles": 0, "Buses": 0, "Trucks": 0, "Total_Vehicles": 0}
+                    if not results_b:
+                        results_b = {"Cars": 0, "Motorcycles": 0, "Buses": 0, "Trucks": 0, "Total_Vehicles": 0}
+
+                    pred_a, total_a, den_a = predict_congestion(
+                        model,
+                        results_a["Cars"], results_a["Motorcycles"],
+                        results_a["Buses"], results_a["Trucks"]
+                    )
+                    pred_b, total_b, den_b = predict_congestion(
+                        model,
+                        results_b["Cars"], results_b["Motorcycles"],
+                        results_b["Buses"], results_b["Trucks"]
+                    )
+
                     cong_a = congestion_label(pred_a)
                     cong_b = congestion_label(pred_b)
-                    
-                    signal_data = optimize_signals({"Total_Vehicles": total_a}, {"Total_Vehicles": total_b})
-                    
-                    green_a = signal_data["Route A"]["Green_Time"]
-                    green_b = signal_data["Route B"]["Green_Time"]
-                    
-                    # Create route data exactly how Simulation code expects it for drawing the plot
-                    route_data_map = {
-                        "Route A": {"vehicles": total_a, "density": den_a, "congestion": cong_a, "green_time": green_a},
-                        "Route B": {"vehicles": total_b, "density": den_b, "congestion": cong_b, "green_time": green_b}
+
+                    signal_data = optimize_signals(
+                        {"Total_Vehicles": total_a},
+                        {"Total_Vehicles": total_b}
+                    )
+
+                    new_green_a = signal_data["Route A"]["Green_Time"]
+                    new_green_b = signal_data["Route B"]["Green_Time"]
+                    share_a     = signal_data["Route A"]["Traffic_Share"]
+                    share_b     = signal_data["Route B"]["Traffic_Share"]
+
+                    # Signal plan management:
+                    # First result → becomes current plan and starts signal
+                    # Subsequent results → stored as next plan, never resets active phase
+                    if first_result:
+                        st.session_state.cur_green_a = new_green_a
+                        st.session_state.cur_green_b = new_green_b
+                        first_result = False
+                    else:
+                        # Queue the new prediction — JS will pick it up at next phase boundary
+                        st.session_state.next_green_a = new_green_a
+                        st.session_state.next_green_b = new_green_b
+                        st.session_state.next_plan_info = {"green_a": new_green_a, "green_b": new_green_b}
+
+                    # Update live overview data
+                    st.session_state.live_overview_data = {
+                        "total_a": total_a, "den_a": den_a, "cong_a": cong_a,
+                        "total_b": total_b, "den_b": den_b, "cong_b": cong_b,
+                        "green_a": new_green_a, "green_b": new_green_b,
+                        "share_a": share_a, "share_b": share_b,
+                        "window_start": current_sec, "window_end": end_sec,
                     }
-                    
+                    st.session_state.latest_window_start = current_sec
+                    st.session_state.latest_window_end   = end_sec
+                    st.session_state.completed_windows.append((current_sec, end_sec))
+
+                    # Build traffic map figure
+                    route_data_map = {
+                        "Route A": {
+                            "vehicles": total_a, "density": den_a,
+                            "congestion": cong_a, "green_time": new_green_a
+                        },
+                        "Route B": {
+                            "vehicles": total_b, "density": den_b,
+                            "congestion": cong_b, "green_time": new_green_b
+                        }
+                    }
                     fig = draw_live_traffic_map(route_data_map)
-                    html_code = generate_signal_html(green_a, green_b, 3)
-                    
-                    with videos_container.container():
+
+                    # Build signal HTML — pass next plan if queued
+                    _next_a = st.session_state.next_green_a
+                    _next_b = st.session_state.next_green_b
+                    signal_html_code = _make_signal_html(
+                        st.session_state.cur_green_a,
+                        st.session_state.cur_green_b,
+                        yl=YELLOW_TIME,
+                        next_a=_next_a,
+                        next_b=_next_b,
+                        window_label=f"{current_sec}–{end_sec}s"
+                    )
+
+                    # ==========================================
+                    # RENDER DASHBOARD
+                    # ==========================================
+                    with dash_placeholder.container():
+                        # Video row
                         v_col1, v_col2 = st.columns(2)
                         with v_col1:
-                            st.markdown(f"**Route A `({current_sec}-{end_sec}s)`**")
+                            st.markdown(f"**📹 Route A — Window `{current_sec}–{end_sec}s`**")
                             st.video(temp_a_path, start_time=current_sec)
                         with v_col2:
-                            st.markdown(f"**Route B `({current_sec}-{end_sec}s)`**")
+                            st.markdown(f"**📹 Route B — Window `{current_sec}–{end_sec}s`**")
                             st.video(temp_b_path, start_time=current_sec)
-                            
-                    with visualizer_container.container():
-                        st.markdown("---")
-                        # Emulate layout: Map on the left, Side-by-side stats below it or left/right
-                        top_left, top_right = st.columns([1, 1.6], gap="large")
-                        
-                        with top_right:
-                            st.pyplot(fig, clear_figure=True)
-                            
-                        with top_left:
-                            st.markdown('<div class="sim-section-title">🛣️ ROUTE A LIVE</div>', unsafe_allow_html=True)
-                            st.markdown(f"**Cars:** {total_a}")
-                            st.markdown(f"**Congestion:** {cong_a}")
-                            st.markdown(f"**Density:** {den_a*100:.1f}%")
-                            st.markdown(f"**Green:** {green_a}s")
-                            
-                            st.markdown('<div class="sim-section-title" style="margin-top:16px;">🛣️ ROUTE B LIVE</div>', unsafe_allow_html=True)
-                            st.markdown(f"**Cars:** {total_b}")
-                            st.markdown(f"**Congestion:** {cong_b}")
-                            st.markdown(f"**Density:** {den_b*100:.1f}%")
-                            st.markdown(f"**Green:** {green_b}s")
-                        
-                        st.markdown("---")
-                        
-                        bot_left, bot_right = st.columns([1.5, 1], gap="large")
-                        with bot_left:
-                            components.html(html_code, height=440, scrolling=False)
-                                
+
+                        st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
+
+                        # ── Two-column dashboard: Signal Controller LEFT | Analysis Cards RIGHT ──
+                        left_col, right_col = st.columns([1, 1.4], gap="large")
+
+                        with left_col:
+                            st.markdown(
+                                '<div class="sim-section-title">🚦 AI Live Signal Controller</div>',
+                                unsafe_allow_html=True
+                            )
+                            components.html(signal_html_code, height=480, scrolling=False)
+
+                        with right_col:
+                            st.markdown(
+                                '<div class="sim-section-title">🤖 Real-Time AI Analysis</div>',
+                                unsafe_allow_html=True
+                            )
+                            # --- Route A Card ---
+                            badge_a       = _congestion_badge(cong_a)
+                            lborder_a     = get_route_color(cong_a)
+                            st.markdown(f"""
+                            <div class="route-card" style="border-left: 4px solid {lborder_a}; margin-bottom: 14px;">
+                                <div class="rc-title">🛣️ Route A</div>
+                                <div class="rc-row">
+                                    <span class="rc-key">🚗 Total Vehicles</span>
+                                    <span class="rc-val">{total_a}</span>
+                                </div>
+                                <div class="rc-row">
+                                    <span class="rc-key">📊 Density</span>
+                                    <span class="rc-val">{den_a*100:.1f}%</span>
+                                </div>
+                                <div class="rc-row">
+                                    <span class="rc-key">⚡ Congestion</span>
+                                    <span class="rc-val">{badge_a}</span>
+                                </div>
+                                <div class="rc-row">
+                                    <span class="rc-key">📈 Traffic Share</span>
+                                    <span class="rc-val">{share_a*100:.1f}%</span>
+                                </div>
+                                <div class="rc-row">
+                                    <span class="rc-key">🚦 AI Green Time</span>
+                                    <span class="rc-val">{new_green_a}s</span>
+                                </div>
+                                <div class="rc-row" style="border-bottom:none;">
+                                    <span class="rc-key">📡 Current Status</span>
+                                    <span class="rc-val">{badge_a}</span>
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+
+                            # --- Route B Card ---
+                            badge_b       = _congestion_badge(cong_b)
+                            lborder_b     = get_route_color(cong_b)
+                            st.markdown(f"""
+                            <div class="route-card" style="border-left: 4px solid {lborder_b};">
+                                <div class="rc-title">🛣️ Route B</div>
+                                <div class="rc-row">
+                                    <span class="rc-key">🚗 Total Vehicles</span>
+                                    <span class="rc-val">{total_b}</span>
+                                </div>
+                                <div class="rc-row">
+                                    <span class="rc-key">📊 Density</span>
+                                    <span class="rc-val">{den_b*100:.1f}%</span>
+                                </div>
+                                <div class="rc-row">
+                                    <span class="rc-key">⚡ Congestion</span>
+                                    <span class="rc-val">{badge_b}</span>
+                                </div>
+                                <div class="rc-row">
+                                    <span class="rc-key">📈 Traffic Share</span>
+                                    <span class="rc-val">{share_b*100:.1f}%</span>
+                                </div>
+                                <div class="rc-row">
+                                    <span class="rc-key">🚦 AI Green Time</span>
+                                    <span class="rc-val">{new_green_b}s</span>
+                                </div>
+                                <div class="rc-row" style="border-bottom:none;">
+                                    <span class="rc-key">📡 Current Status</span>
+                                    <span class="rc-val">{badge_b}</span>
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+
+                    # ── Traffic Map ──
+                    with map_placeholder.container():
+                        st.markdown('<div class="dash-header">🗺️ Live Traffic Map</div>', unsafe_allow_html=True)
+                        st.pyplot(fig, use_container_width=True, clear_figure=True)
+                        plt.close(fig)
+
+                    # ── Traffic Overview (appears after first window only) ──
+                    with overview_placeholder.container():
+                        st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
+                        ws = st.session_state.latest_window_start
+                        we = st.session_state.latest_window_end
+                        render_traffic_overview(
+                            _live_overview_to_df(total_a, total_b, den_a, den_b),
+                            label=f"Current Window: {ws}–{we}s"
+                        )
+
                     current_sec += 5
-                    
-                status_container.markdown("**Status:** `● Analysis Complete`")
+
+                # Analysis complete
+                with status_placeholder.container():
+                    st.markdown(
+                        '<div class="dash-header">✅ ANALYSIS COMPLETE</div>',
+                        unsafe_allow_html=True
+                    )
+                    completed_html = ""
+                    for (ws, we) in st.session_state.completed_windows:
+                        completed_html += f'<span style="color:#16a34a; font-weight:700;">✓ {ws}–{we}s</span> &nbsp; '
+                    st.markdown(
+                        f'<div style="font-size:13px; margin:4px 0;">{completed_html}</div>',
+                        unsafe_allow_html=True
+                    )
+
                 st.session_state.live_analysis_running_v2 = False
-                
+
             except Exception as e:
                 st.error(f"Error during analysis: {e}")
                 st.session_state.live_analysis_running_v2 = False
+
+        # Show AI Model Performance only after analysis has started
+        if st.session_state.get("live_analysis_started", False):
+            st.divider()
+            render_model_performance()
+
+    elif not route_a_file or not route_b_file:
+        # No videos uploaded yet — show placeholder guidance
+        st.markdown("""
+        <div style="text-align:center; padding:40px 20px; border:2px dashed #cbd5e1; border-radius:18px; color:#94a3b8; margin-top:24px;">
+            <div style="font-size:40px; margin-bottom:12px;">📹</div>
+            <div style="font-size:16px; font-weight:700; color:#64748b; margin-bottom:6px;">Upload Both Videos to Begin</div>
+            <div style="font-size:13px;">Upload Route A and Route B video files above, then click <strong>Start Live AI Analysis</strong>.</div>
+        </div>
+        """, unsafe_allow_html=True)
 
 
 
@@ -777,6 +1241,13 @@ elif mode == "🎮 Simulation Dashboard":
     </div>
     """, unsafe_allow_html=True)
 
+    # Traffic Overview — always shown in Simulation mode
+    render_traffic_overview(latest_routes)
+
+    # AI Model Performance — always shown in Simulation mode
+    render_model_performance()
+
+    st.markdown("<div style='margin-bottom:8px;'></div>", unsafe_allow_html=True)
 
     # ==========================================
     # TOP ROW — Controls | Network Map
@@ -785,10 +1256,6 @@ elif mode == "🎮 Simulation Dashboard":
     top_left, top_right = st.columns([1, 1.6], gap="large")
 
     with top_left:
-
-        # ==========================================
-        # INTERACTIVE TRAFFIC SIMULATION CONTROLS
-        # ==========================================
 
         st.markdown('<div class="sim-section-title">🎛️ Simulation Controls</div>',
                     unsafe_allow_html=True)

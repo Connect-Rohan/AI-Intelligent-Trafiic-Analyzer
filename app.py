@@ -790,26 +790,15 @@ if mode == "📹 Camera Monitoring":
 
                 # Helper to compute analysis-driven signal HTML
                 # Key principle: new prediction → next_plan; current countdown continues in JS
-                def _make_signal_html(initial_green_a, initial_green_b, yl=3,
-                                      next_a=None, next_b=None, window_label=""):
+                def _make_signal_html(initial_green_a, initial_green_b, yl=3):
                     """
                     Renders a live signal controller HTML.
                     - initial_green_a/b: green times for the FIRST plan
-                    - next_a/next_b: next-plan values shown in a queue panel but not applied yet
                     - The JS controller runs initial_green_a → yellow → initial_green_b → yellow → loop
-                      but on each phase-end it checks window.nextPlanA / window.nextPlanB and
-                      applies them as the NEW durations for the following cycle.
+                      but on each phase-end it checks localStorage and
+                      applies the NEW durations for the following cycle.
                     """
                     total_cycle = initial_green_a + yl + initial_green_b + yl
-                    next_info_html = ""
-                    if next_a is not None and next_b is not None:
-                        next_info_html = f"""
-                        <div class="next-plan">
-                            <div class="next-plan-title">⏭ Next Predicted Plan (queued)</div>
-                            <div class="next-plan-row"><span>Route A Green</span><strong>{next_a}s</strong></div>
-                            <div class="next-plan-row"><span>Route B Green</span><strong>{next_b}s</strong></div>
-                        </div>
-                        """
                     return f'''<!DOCTYPE html>
 <html>
 <head>
@@ -838,10 +827,6 @@ body {{ font-family: 'Inter', Arial, sans-serif; background: transparent; }}
 .timer-red    {{ color: #dc2626; }}
 .info {{ margin-top: 14px; padding-top: 12px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 10px; color: #64748b; letter-spacing: 0.5px; }}
 .info span {{ color: #374151; font-weight: 600; }}
-.next-plan {{ margin-top: 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px 12px; }}
-.next-plan-title {{ font-size: 10px; font-weight: 700; color: #3b82f6; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }}
-.next-plan-row {{ display: flex; justify-content: space-between; font-size: 11px; color: #1e40af; margin-bottom: 4px; }}
-.next-plan-row strong {{ font-weight: 700; }}
 </style>
 </head>
 <body>
@@ -866,27 +851,35 @@ body {{ font-family: 'Inter', Arial, sans-serif; background: transparent; }}
   <div id="timerB" class="timer">--</div>
 </div>
 </div>
-<div class="info">AI Green Time &nbsp;|&nbsp; A = <span id="infoA">{initial_green_a}s</span> &nbsp;·&nbsp; B = <span id="infoB">{initial_green_b}s</span> &nbsp;·&nbsp; Cycle = <span>{total_cycle}s</span></div>
-{next_info_html}
+<div class="info">AI Green Time &nbsp;|&nbsp; A = <span id="infoA">{initial_green_a}s</span> &nbsp;·&nbsp; B = <span id="infoB">{initial_green_b}s</span> &nbsp;·&nbsp; Cycle = <span id="infoC">{total_cycle}s</span></div>
 </div>
 <script>
-// Current plan (may be updated from next-plan at phase boundary)
+// Current plan 
 var curA = {initial_green_a};
 var curB = {initial_green_b};
 const yT  = {yl};
-// Next plan injected from Python via data attribute on body
-window.nextPlanA = {next_a if next_a is not None else 'null'};
-window.nextPlanB = {next_b if next_b is not None else 'null'};
+
+// Clear localStorage initially so we don't use stale predictions
+localStorage.removeItem('nextPlanA');
+localStorage.removeItem('nextPlanB');
+
 const red=document.getElementById("red"), yellow=document.getElementById("yellow"), green=document.getElementById("green");
 const roadA=document.getElementById("roadA"), roadB=document.getElementById("roadB");
 const statusA=document.getElementById("statusA"), statusB=document.getElementById("statusB");
 const timerA=document.getElementById("timerA"), timerB=document.getElementById("timerB");
 const routeBoxA=document.getElementById("routeBoxA"), routeBoxB=document.getElementById("routeBoxB");
+const infoA=document.getElementById("infoA"), infoB=document.getElementById("infoB"), infoC=document.getElementById("infoC");
+
 function resetLights(){{ red.className="light"; yellow.className="light"; green.className="light"; }}
 function applyNextPlan(){{
-    if(window.nextPlanA !== null && window.nextPlanB !== null){{
-        curA = window.nextPlanA; curB = window.nextPlanB;
-        window.nextPlanA = null; window.nextPlanB = null;
+    let nA = localStorage.getItem('nextPlanA');
+    let nB = localStorage.getItem('nextPlanB');
+    if(nA !== null && nB !== null){{
+        curA = parseInt(nA); 
+        curB = parseInt(nB);
+        infoA.innerText = curA + "s";
+        infoB.innerText = curB + "s";
+        infoC.innerText = (curA + curB + yT * 2) + "s";
     }}
 }}
 function routeAGreenPhase(seconds){{
@@ -973,21 +966,29 @@ routeAGreenPhase(curA);
                     end_sec = current_sec + 5
                     progress_ratio = min(1.0, current_sec / max_duration)
 
-                    # --- Status panel ---
+                    # --- Status panel with updated loading and removing percentage if unknown ---
                     with status_placeholder.container():
                         st.markdown(
-                            f'<div class="dash-header">📡 ANALYZING LIVE TRAFFIC</div>',
+                            f'<div class="dash-header">📡 AI LIVE TRAFFIC ANALYSIS</div>',
                             unsafe_allow_html=True
                         )
-                        completed_html = ""
-                        for (ws, we) in st.session_state.completed_windows:
-                            completed_html += f'<span style="color:#16a34a; font-weight:700;">✓ {ws}–{we}s</span> &nbsp; '
-                        current_html = f'<span style="color:#f97316; font-weight:700;">⟳ {current_sec}–{end_sec}s — Analyzing...</span>'
-                        st.markdown(
-                            f'<div style="font-size:13px; margin:8px 0;">{completed_html}{current_html}</div>',
-                            unsafe_allow_html=True
-                        )
-                        st.progress(progress_ratio)
+                        st.markdown(f'''
+                        <div style="background: #ffffff; padding: 22px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.06); margin-bottom: 12px;">
+                            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                                <div style="width: 24px; height: 24px; border: 3px solid #e2e8f0; border-top: 3px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                                <div style="font-weight: 800; color: #0f172a; font-size: 15px;">Processing Route A & Route B...</div>
+                            </div>
+                            <div style="color: #475569; font-size: 13px; margin-bottom: 6px;">
+                                Analyzing current window: <strong style="color: #0f172a;">{current_sec} – {end_sec} seconds</strong>
+                            </div>
+                            <div style="font-size: 12px; color: #94a3b8; font-style: italic;">
+                                Please wait — AI video analysis can take some time depending on video length and processing speed.
+                            </div>
+                        </div>
+                        <style>
+                        @keyframes spin {{ 0% {{ transform: rotate(0deg); }} 100% {{ transform: rotate(360deg); }} }}
+                        </style>
+                        ''', unsafe_allow_html=True)
 
                     # --- Run backend analysis (UNCHANGED) ---
                     results_a = analyze_video_window(temp_a_path, current_sec, 5)
@@ -1031,12 +1032,21 @@ routeAGreenPhase(curA);
                     if first_result:
                         st.session_state.cur_green_a = new_green_a
                         st.session_state.cur_green_b = new_green_b
+                        
+                        st.session_state.static_signal_html = _make_signal_html(
+                            st.session_state.cur_green_a,
+                            st.session_state.cur_green_b,
+                            yl=YELLOW_TIME
+                        )
                         first_result = False
                     else:
                         # Queue the new prediction — JS will pick it up at next phase boundary
                         st.session_state.next_green_a = new_green_a
                         st.session_state.next_green_b = new_green_b
                         st.session_state.next_plan_info = {"green_a": new_green_a, "green_b": new_green_b}
+                        
+                    # Clear loading spinner immediately before rendering map/dashboard updates
+                    status_placeholder.empty()
 
                     # Update live overview data
                     st.session_state.live_overview_data = {
@@ -1066,14 +1076,6 @@ routeAGreenPhase(curA);
                     # Build signal HTML — pass next plan if queued
                     _next_a = st.session_state.next_green_a
                     _next_b = st.session_state.next_green_b
-                    signal_html_code = _make_signal_html(
-                        st.session_state.cur_green_a,
-                        st.session_state.cur_green_b,
-                        yl=YELLOW_TIME,
-                        next_a=_next_a,
-                        next_b=_next_b,
-                        window_label=f"{current_sec}–{end_sec}s"
-                    )
 
                     # ==========================================
                     # RENDER DASHBOARD
@@ -1098,7 +1100,34 @@ routeAGreenPhase(curA);
                                 '<div class="sim-section-title">🚦 AI Live Signal Controller</div>',
                                 unsafe_allow_html=True
                             )
-                            components.html(signal_html_code, height=480, scrolling=False)
+                            # Render static HTML - Streamlit won't recreate the iframe if the string is identical!
+                            components.html(st.session_state.static_signal_html, height=440, scrolling=False)
+                            
+                            # Render the dynamic queued prediction display below the controller natively
+                            q_green_a = _next_a if _next_a else new_green_a
+                            q_green_b = _next_b if _next_b else new_green_b
+                            
+                            st.markdown(f"""
+                            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px; margin-top: 10px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <div style="font-size: 12px; font-weight: 800; color: #1e40af; letter-spacing: 1px; text-transform: uppercase;">
+                                        AI GREEN TIME (Next)
+                                    </div>
+                                    <div style="font-size: 10px; background:#dbeafe; color:#1e3a8a; padding:2px 8px; border-radius:4px; font-weight:700;">
+                                        Latest: {current_sec}–{end_sec}s
+                                    </div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; font-size: 14px; color: #1e40af; margin-bottom: 8px;">
+                                    <span>Route A Green</span><strong style="font-size:16px;">{q_green_a}s</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; font-size: 14px; color: #1e40af;">
+                                    <span>Route B Green</span><strong style="font-size:16px;">{q_green_b}s</strong>
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            # Push the newly queued prediction into the browser's localStorage for the iframe to read seamlessly
+                            components.html(f"<script>localStorage.setItem('nextPlanA', '{q_green_a}'); localStorage.setItem('nextPlanB', '{q_green_b}');</script>", height=0, width=0)
 
                         with right_col:
                             st.markdown(

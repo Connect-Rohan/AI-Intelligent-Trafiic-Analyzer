@@ -108,10 +108,15 @@ def analyze_video_window(
 
 
     # ========================================================
-    # UNIQUE TRACKED VEHICLES
+    # UNIQUE TRACKED VEHICLES (Max-per-frame Aggregation)
     # ========================================================
 
-    tracked_vehicles = {}
+    max_counts = {
+        "Cars": 0,
+        "Motorcycles": 0,
+        "Buses": 0,
+        "Trucks": 0
+    }
 
     frame_count = 0
 
@@ -140,9 +145,7 @@ def analyze_video_window(
 
 
         # ====================================================
-        # YOLO TRACKING
-        #
-        # GMC IS DISABLED.
+        # YOLO TRACKING (or predicting)
         # ====================================================
 
         results = model.track(
@@ -159,6 +162,12 @@ def analyze_video_window(
             if result.boxes is None:
                 continue
 
+            current_frame_counts = {
+                "Cars": 0,
+                "Motorcycles": 0,
+                "Buses": 0,
+                "Trucks": 0
+            }
 
             for box in result.boxes:
 
@@ -169,30 +178,16 @@ def analyze_video_window(
                 if class_id not in VEHICLE_CLASSES:
                     continue
 
-
-                # ------------------------------------------------
-                # TRACK ID
-                # ------------------------------------------------
-
-                if box.id is None:
-                    continue
-
-                track_id = int(
-                    box.id[0]
-                )
-
-
                 vehicle_type = VEHICLE_CLASSES[
                     class_id
                 ]
 
+                current_frame_counts[vehicle_type] += 1
 
-                # ------------------------------------------------
-                # SAVE UNIQUE VEHICLE
-                # ------------------------------------------------
-
-                tracked_vehicles[track_id] = vehicle_type
-
+            for v_type in max_counts:
+                if current_frame_counts[v_type] > max_counts[v_type]:
+                    max_counts[v_type] = current_frame_counts[v_type]
+                    
 
     cap.release()
 
@@ -201,22 +196,7 @@ def analyze_video_window(
     # COUNT UNIQUE VEHICLES
     # ========================================================
 
-    counts = {
-
-        "Cars": 0,
-
-        "Motorcycles": 0,
-
-        "Buses": 0,
-
-        "Trucks": 0
-    }
-
-
-    for vehicle_type in tracked_vehicles.values():
-
-        counts[vehicle_type] += 1
-
+    counts = max_counts
 
     total_vehicles = sum(
         counts.values()

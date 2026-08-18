@@ -1,11 +1,9 @@
-```text
-streamlit
-matplotlib
+streamlit==1.61.1
 pandas
 numpy
+matplotlib
 scikit-learn
 joblib
 opencv-python-headless
 ultralytics
 Pillow
-```

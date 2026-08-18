@@ -11,6 +11,12 @@
 
 <br><br>
 
+<a href="https://ai-intelligent-traffic-analyzer.streamlit.app/">
+  <img src="https://img.shields.io/badge/🚀%20LIVE%20DEMO-Open%20Dashboard-00C853?style=for-the-badge" />
+</a>
+
+<br><br>
+
 **Turning traffic camera footage into intelligent, adaptive traffic decisions.**
 
 <br>
@@ -26,6 +32,7 @@
 ## 🧠 THE SYSTEM
 
 </div>
+
 
 <table>
 <tr>
